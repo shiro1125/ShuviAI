@@ -12,21 +12,32 @@ Run this file directly to start the application.
 
 import sys
 import traceback
+from typing import Optional
 
 import config
-from input.voice_input import listen_and_transcribe
 from ai.gemini import generate_reply
+from input.voice_input import listen_and_transcribe
 
 try:
     # Attempt to import the TTS module conditionally. This allows running the
     # application without TTS dependencies if USE_TTS is False.
     if config.USE_TTS:
-        from tts.speech import speak
+        from tts.speech import speak  # type: ignore
     else:
         speak = None  # type: ignore
 except Exception:
     # If TTS import fails, fall back to None and warn the user.
     speak = None  # type: ignore
+
+
+def _print_banner() -> None:
+    """Print a startup banner explaining how to use the application."""
+    print("ShuviAI is running.")
+    print("• Speak into your microphone when prompted to ask a question.")
+    print(
+        "• If your microphone is unavailable or PyAudio is not installed, you can type your input manually when prompted."
+    )
+    print("Press Ctrl+C to exit at any time.\n")
 
 
 def main() -> None:
@@ -38,21 +49,21 @@ def main() -> None:
         )
         sys.exit(1)
 
-    print("ShuviAI is running. Speak into your microphone to begin.")
-    print("Press Ctrl+C to exit.")
+    _print_banner()
 
     while True:
         try:
-            # Record audio and convert to text
-            user_text = listen_and_transcribe()
-            if not user_text:
-                print("[INFO] Could not understand audio. Please try again.")
+            # Record audio or accept manual text input and convert to text.
+            user_text: Optional[str] = listen_and_transcribe()
+            if user_text is None or user_text.strip() == "":
+                # Input was not understood or no text was provided.
+                print("[INFO] No input detected. Please try again.")
                 continue
 
             print(f"[USER] {user_text}")
 
             # Generate a reply using the Gemini model
-            ai_response = generate_reply(user_text)
+            ai_response: Optional[str] = generate_reply(user_text)
             if ai_response:
                 print(f"[AI] {ai_response}")
                 # Optionally speak the response aloud
@@ -61,7 +72,9 @@ def main() -> None:
                         speak(ai_response)
                     except Exception:
                         # Catch any TTS errors to prevent the program from crashing
-                        print("[WARNING] Failed to speak response. See traceback for details.")
+                        print(
+                            "[WARNING] Failed to speak response. The response will be displayed in text only."
+                        )
                         traceback.print_exc()
             else:
                 print("[INFO] No response from AI model.")

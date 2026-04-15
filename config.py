@@ -8,12 +8,16 @@ toggles without hard‑coding them in the codebase.
 """
 
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 
-# Load variables from .env into the process environment. If the .env file
-# does not exist, this call silently does nothing.
-load_dotenv()
+# Load variables from a .env file into the process environment.  Using
+# find_dotenv() ensures that the .env file is located starting from the
+# project root when the program is executed from different working
+# directories.  If the .env file does not exist, this call silently does
+# nothing.
+_dotenv_path = find_dotenv()
+load_dotenv(dotenv_path=_dotenv_path)
 
 
 def _str_to_bool(value: str | None, default: bool = False) -> bool:
@@ -37,8 +41,13 @@ def _str_to_bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y"}
 
 
-# API key for the Gemini model. Set this in your .env file.
+# API key for the Gemini model. Set this in your .env file.  Without this
+# key the AI integration will not work.
 GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+
+# Optional: specify a Gemini model name.  Defaults to models/gemini-pro if
+# unspecified.
+GEMINI_MODEL: str | None = os.getenv("GEMINI_MODEL")
 
 # Toggle for text‑to‑speech. When True, the program will speak AI responses.
 USE_TTS: bool = _str_to_bool(os.getenv("USE_TTS"), default=False)
@@ -46,5 +55,6 @@ USE_TTS: bool = _str_to_bool(os.getenv("USE_TTS"), default=False)
 
 __all__ = [
     "GEMINI_API_KEY",
+    "GEMINI_MODEL",
     "USE_TTS",
 ]
