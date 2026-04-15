@@ -1,6 +1,13 @@
-python-dotenv
-google.genai
-SpeechRecognition
-pyttsx3
-pipwin
-pyaudio
+python-dotenv>=1.0.0
+# Google Gen AI SDK. This provides access to the Gemini Developer API.
+google-genai>=0.8.6
+# Speech recognition library. 3.10.0 or newer is recommended.
+SpeechRecognition>=3.10.0
+# Offline text‑to‑speech engine.
+pyttsx3>=2.90
+# pipwin is used on Windows to install precompiled wheels (e.g. PyAudio).
+pipwin>=0.5.1
+# PyAudio is required for microphone support. It is listed here for completeness
+# but may fail to compile on Windows when installed via pip.  Use pipwin to
+# install PyAudio if a regular installation fails.
+pyaudio>=0.2.11

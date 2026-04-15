@@ -12,7 +12,9 @@ Run this file directly to start the application.
 
 import sys
 import traceback
-from typing import Optional
+from typing import Optional, Callable, Any
+
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 import config
 from ai.gemini import generate_reply
@@ -28,6 +30,42 @@ try:
 except Exception:
     # If TTS import fails, fall back to None and warn the user.
     speak = None  # type: ignore
+
+
+def _call_with_timeout(func: Callable[..., Any], *args: Any, timeout: float = 60.0) -> Optional[str]:
+    """
+    Call the provided function in a separate thread and return its result,
+    enforcing a timeout.  If the function does not complete within
+    `timeout` seconds, return ``None`` and log an error.  Any exceptions
+    raised during execution are caught and logged, and ``None`` is
+    returned.
+
+    Parameters
+    ----------
+    func : Callable[..., Any]
+        The function to call.
+    *args : Any
+        Positional arguments to pass to the function.
+    timeout : float, optional
+        Number of seconds to wait for the function to complete.  Defaults
+        to 60 seconds.
+
+    Returns
+    -------
+    Optional[str]
+        The return value of the function if successful and within
+        timeout, otherwise ``None``.
+    """
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(func, *args)
+        try:
+            return future.result(timeout=timeout)
+        except TimeoutError:
+            print(f"[ERROR] AI request timed out after {timeout} seconds.")
+            return None
+        except Exception as exc:
+            print(f"[ERROR] AI call failed: {exc}")
+            return None
 
 
 def _print_banner() -> None:
@@ -62,8 +100,9 @@ def main() -> None:
 
             print(f"[USER] {user_text}")
 
-            # Generate a reply using the Gemini model
-            ai_response: Optional[str] = generate_reply(user_text)
+            # Generate a reply using the Gemini model with a timeout to
+            # prevent the program from hanging if the API call takes too long.
+            ai_response: Optional[str] = _call_with_timeout(generate_reply, user_text, timeout=60)
             if ai_response:
                 print(f"[AI] {ai_response}")
                 # Optionally speak the response aloud
